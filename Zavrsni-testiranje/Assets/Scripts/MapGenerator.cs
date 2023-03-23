@@ -33,6 +33,30 @@ public class MapGenerator : MonoBehaviour
 
     public TerrainType[] regions;
 
+    [SerializeField]
+    private GameObject mesh;
+
+    public float minHeight
+    {
+        get
+        {
+            return meshHeightMultiplier * meshHeightCurve.Evaluate(0);
+        }
+    }
+
+    public float maxHeight
+    {
+        get
+        {
+            return meshHeightMultiplier * meshHeightCurve.Evaluate(1);
+        }
+    }
+
+    private void Start()
+    {
+        GenerateMap();
+    }
+
     public void GenerateMap()
     {
         float[,] noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, noiseScale, octaves, persistance, lacunarity, seed, offset);
@@ -66,7 +90,9 @@ public class MapGenerator : MonoBehaviour
         }
         else if(drawMode == DrawMode.Mesh)
         {
-            display.DrawMesh(MeshGenerator.GenerateTerrainMesh(noiseMap, meshHeightMultiplier, meshHeightCurve, levelOfDetail), TextureGenerator.TextureFromColorMap(colorMap, mapChunkSize, mapChunkSize));
+            display.DrawMesh(MeshGenerator.GenerateTerrainMesh(noiseMap, meshHeightMultiplier, meshHeightCurve, levelOfDetail), TextureGenerator.TextureFromColorMap(colorMap, mapChunkSize, mapChunkSize));         
+
+            MeshCollider meshCollider = mesh.AddComponent<MeshCollider>();
         }
     }
 
