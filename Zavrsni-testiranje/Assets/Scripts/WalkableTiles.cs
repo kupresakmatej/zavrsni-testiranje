@@ -14,6 +14,20 @@ public class WalkableTiles : MonoBehaviour
 
     private List<Vector3> walkableTilePositions = new List<Vector3>();
 
+    public static WalkableTiles instance;
+
+    private void Awake()
+    {
+        if (instance != null)
+        {
+            Destroy(gameObject);
+        }
+        else
+        {
+            instance = this;
+        }
+    }
+
     private void Start()
     {
         GetWalkableTiles();

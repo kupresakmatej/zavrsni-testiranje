@@ -4,11 +4,26 @@ using UnityEngine;
 
 public class ExitSpawner : MonoBehaviour
 {
+    public static ExitSpawner instance;
+    public Vector3 exitPosition;
+
     public WalkableTiles walkableTiles;
     public int minDistanceFromPlayer = 5;
     public GameObject exitPrefab;
 
     private Vector3 getExitPosition;
+
+    private void Awake()
+    {
+        if (instance != null)
+        {
+            Destroy(gameObject);
+        }
+        else
+        {
+            instance = this;
+        }
+    }
 
     private void Start()
     {
@@ -24,13 +39,13 @@ public class ExitSpawner : MonoBehaviour
     {
         yield return new WaitForSeconds(2f);
 
-        List<Vector3> walkableTilePositions = walkableTiles.GetWalkableTiles();
+        List<Vector3> walkableTilePositions = WalkableTiles.instance.GetWalkableTilePositions();
 
         if (walkableTilePositions.Count > 0)
         {
             Vector3 playerPosition = GameObject.FindGameObjectWithTag("Player").transform.position;
 
-            Vector3 exitPosition = Vector3.zero;
+            exitPosition = Vector3.zero;
             float minDistance = float.MaxValue;
 
             foreach (Vector3 position in walkableTilePositions)
