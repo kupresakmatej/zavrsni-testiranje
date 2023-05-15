@@ -5,6 +5,10 @@ TagManager:
   serializedVersion: 2
   tags:
   - Exit
+  - BFS
+  - Dijkstra
+  - GameControl
+  - PostProcessing
   layers:
   - Default
   - TransparentFX

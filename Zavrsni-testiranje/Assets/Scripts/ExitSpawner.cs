@@ -37,34 +37,44 @@ public class ExitSpawner : MonoBehaviour
 
     private IEnumerator SpawnExit()
     {
-        yield return new WaitForSeconds(2f);
+        yield return new WaitForSeconds(4f);
 
-        List<Vector3> walkableTilePositions = WalkableTiles.instance.GetWalkableTilePositions();
+        List<Vector3> walkableTilePositions = WalkableTiles.instance.walkableTilePositions;
 
         if (walkableTilePositions.Count > 0)
         {
             Vector3 playerPosition = GameObject.FindGameObjectWithTag("Player").transform.position;
 
-            exitPosition = Vector3.zero;
-            float minDistance = float.MaxValue;
+            // Define the minimum distance between the exit and the player
+            float minDistanceFromPlayer = 150f;
 
+            // Define the distance from the player to search for a suitable location to spawn the exit
+            float searchDistance = 160f;
+
+            List<Vector3> suitablePositions = new List<Vector3>();
+
+            // Find all suitable positions within the search distance
             foreach (Vector3 position in walkableTilePositions)
             {
                 float distance = Vector3.Distance(position, playerPosition);
-                if (distance >= minDistanceFromPlayer && distance < minDistance)
+                if (distance >= minDistanceFromPlayer && distance < searchDistance)
                 {
-                    exitPosition = position;
-                    minDistance = distance;
+                    suitablePositions.Add(position);
                 }
             }
 
-            if (exitPosition != Vector3.zero)
+            if (suitablePositions.Count > 0)
             {
-                exitPosition.y += gameObject.transform.localScale.y / 2;
+                // Select a random suitable position to spawn the exit
+                int randomIndex = Random.Range(0, suitablePositions.Count);
+                Vector3 exitPosition = suitablePositions[randomIndex];
+                //exitPosition.y += gameObject.transform.localScale.y / 2;
 
                 getExitPosition = exitPosition;
 
-                Instantiate(exitPrefab, exitPosition, Quaternion.identity);
+                Instantiate(exitPrefab, exitPosition, Quaternion.Euler(-90f, 0f, 0f));
+
+                Debug.Log($"Generated exit position is {exitPosition}");
             }
             else
             {

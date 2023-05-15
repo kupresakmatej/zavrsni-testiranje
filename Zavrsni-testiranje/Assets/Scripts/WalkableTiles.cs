@@ -12,12 +12,14 @@ public class WalkableTiles : MonoBehaviour
     public Color tileColor = Color.green;
     public MeshFilter meshFilter;
 
-    private List<Vector3> walkableTilePositions = new List<Vector3>();
+    public List<Vector3> walkableTilePositions = new List<Vector3>();
 
     public static WalkableTiles instance;
 
     private void Awake()
     {
+        walkableTilePositions.Clear();
+
         if (instance != null)
         {
             Destroy(gameObject);
@@ -33,22 +35,12 @@ public class WalkableTiles : MonoBehaviour
         GetWalkableTiles();
     }
 
-    public bool IsWalkable(Vector3 position)
+    public void GetWalkableTiles()
     {
-        Vector3 bottomCenter = position + new Vector3(0f, -0.5f * tileSize, 0f);
-        RaycastHit hit;
+        if (meshFilter == null) return;
 
-        if (Physics.Raycast(bottomCenter, Vector3.up, out hit, tileSize, walkableLayer))
-        {
-            return true;
-        }
-
-        return false;
-    }
-
-    public List<Vector3> GetWalkableTiles()
-    {
         Mesh mesh = meshFilter.sharedMesh;
+        if (mesh == null) return;
 
         Vector3[] vertices = mesh.vertices;
         int[] triangles = mesh.triangles;
@@ -81,24 +73,20 @@ public class WalkableTiles : MonoBehaviour
 
             if (Vector3.Angle(normal, Vector3.up) <= maxSlopeAngle && ((1 << gameObject.layer) & walkableLayer) != 0)
             {
-                Gizmos.color = tileColor;
-
                 //check if the normal is facing upward or downward
                 if (normal.y >= 0f)
                 {
                     Vector3 centerPosition = (v1 + v2 + v3) / 3f;
                     centerPosition -= new Vector3(tileSize / 2f, 0f, tileSize / 2f); // center the position
 
+                    walkableTilePositions.Add(centerPosition);
+
                     drawnTriangles.Add(i);
                     drawnTriangles.Add(i + 1);
                     drawnTriangles.Add(i + 2);
-
-                    walkableTilePositions.Add(centerPosition);
                 }
             }
         }
-
-        return walkableTilePositions;
     }
 
     private void OnDrawGizmos()
@@ -158,8 +146,6 @@ public class WalkableTiles : MonoBehaviour
                     drawnTriangles.Add(i);
                     drawnTriangles.Add(i + 1);
                     drawnTriangles.Add(i + 2);
-
-                    walkableTilePositions.Add(centerPosition);
                 }
             }
         }

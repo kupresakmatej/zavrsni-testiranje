@@ -10,6 +10,9 @@ public class PlayerSpawner : MonoBehaviour
     public WalkableTiles walkableTiles;
     public GameObject playerPrefab;
 
+    [SerializeField]
+    private Light directionalLight;
+
     private void Awake()
     {
         if (instance != null)
@@ -29,10 +32,10 @@ public class PlayerSpawner : MonoBehaviour
 
     private IEnumerator WaitForSeconds()
     {
-        yield return new WaitForSeconds(0.1f);
+        yield return new WaitForSeconds(2f);
 
         // Get the list of walkable tile positions from the WalkableTiles script
-        List<Vector3> walkablePositions = WalkableTiles.instance.GetWalkableTilePositions();
+        List<Vector3> walkablePositions = WalkableTiles.instance.walkableTilePositions;
 
         // If there are no walkable positions, exit the function
         if (walkablePositions.Count == 0)
@@ -43,9 +46,13 @@ public class PlayerSpawner : MonoBehaviour
         // Choose a random walkable position to spawn the player on
         spawnPosition = walkablePositions[Random.Range(0, walkablePositions.Count)];
 
-        spawnPosition.y += gameObject.transform.localScale.y / 2;
+        //spawnPosition.y += gameObject.transform.localScale.y / 2;
 
         // Instantiate the player prefab at the chosen spawn position
         Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
+
+        directionalLight.intensity = 0f;
+
+        Debug.Log($"Generated player position is {spawnPosition}");
     }
 }

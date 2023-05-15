@@ -1,203 +1,162 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
 
 public class Dijkstra : MonoBehaviour
 {
-    private Dictionary<Vector3, Node> nodes = new Dictionary<Vector3, Node>();
+    private List<Vector3> walkableTilePositions; // List of walkable tile positions
+    private Vector3 startPosition; // Start position for pathfinding
+    private Vector3 endPosition; // End position for pathfinding
 
-    private List<Vector3> walkableTilePositions = new List<Vector3>();
+    private Dictionary<Vector3, float> distances; // Map of positions to their tentative distances
+    private Dictionary<Vector3, Vector3> cameFrom; // Map of positions to their previous positions in the path
+    private HashSet<Vector3> visited; // Set of visited positions
 
-    void Start()
+    public List<Vector3> path = new List<Vector3>();
+
+    public static Dijkstra instance;
+
+    private void Awake()
     {
-        StartCoroutine(WaitForSpawns());
+        path.Clear();
+
+        if (instance != null)
+        {
+            Destroy(gameObject);
+        }
+        else
+        {
+            instance = this;
+        }
     }
 
-    public List<Vector3> FindShortestPath(Vector3 start, Vector3 end)
+    private void Start()
     {
-        Debug.Log("FindShortestPath called with start: " + start + " and end: " + end);
+        StartCoroutine(GetPathList());
+    }
 
-        if (!nodes.ContainsKey(start))
+    private IEnumerator GetPathList()
+    {
+        Stopwatch stopwatch = new Stopwatch();
+
+        // Start the stopwatch
+        stopwatch.Start();
+
+        yield return new WaitForSeconds(6f);
+
+        walkableTilePositions = WalkableTiles.instance.walkableTilePositions;
+
+        startPosition = GameObject.FindGameObjectWithTag("Player").transform.position;
+        endPosition = GameObject.FindGameObjectWithTag("Exit").transform.position;
+
+        List<Vector3> path = FindPath(startPosition, endPosition);
+        if (path != null)
         {
-            Debug.LogError("Start position not found in nodes dictionary: " + start);
-            return null;
+            UnityEngine.Debug.Log($"Dijkstra path found with length {path.Count}");
+        }
+        else
+        {
+            UnityEngine.Debug.Log("No path found!");
         }
 
-        if (!nodes.ContainsKey(end))
+        stopwatch.Stop();
+
+        // Get the elapsed time in milliseconds
+        long elapsedMillis = stopwatch.ElapsedMilliseconds;
+
+        var seconds = (elapsedMillis / 1000) % 60;
+        var minutes = (elapsedMillis / 1000) / 60;
+
+        UnityEngine.Debug.Log("Time taken: " + minutes + ":" + seconds);
+    }
+
+    private List<Vector3> FindPath(Vector3 start, Vector3 end)
+    {
+        distances = new Dictionary<Vector3, float>();
+        cameFrom = new Dictionary<Vector3, Vector3>();
+        visited = new HashSet<Vector3>();
+
+        foreach (Vector3 tilePos in walkableTilePositions)
         {
-            Debug.LogError("End position not found in nodes dictionary: " + end);
-            return null;
+            distances[tilePos] = Mathf.Infinity;
         }
 
-        Dictionary<Vector3, float> distance = new Dictionary<Vector3, float>();
-        Dictionary<Vector3, Vector3> previous = new Dictionary<Vector3, Vector3>();
-        HashSet<Vector3> unvisited = new HashSet<Vector3>();
+        distances[start] = 0;
+        cameFrom[start] = start;
 
-        foreach (Node node in nodes.Values)
+        while (visited.Count < walkableTilePositions.Count)
         {
-            distance[node.position] = float.MaxValue;
-            previous[node.position] = Vector3.zero;
-            unvisited.Add(node.position);
-        }
-
-        distance[start] = 0;
-
-        while (unvisited.Count > 0)
-        {
-            Vector3 current = Vector3.zero;
-            float shortestDistance = float.MaxValue;
-
-            foreach (Vector3 position in unvisited)
-            {
-                if (distance[position] < shortestDistance)
-                {
-                    current = position;
-                    shortestDistance = distance[position];
-                }
-            }
-
-            unvisited.Remove(current);
+            Vector3 current = GetNextVertex();
+            visited.Add(current);
 
             if (current == end)
             {
-                break;
+                return GeneratePath(start, end);
             }
 
-            if (!nodes.ContainsKey(current))
+            foreach (Vector3 neighbor in GetNeighbors(current))
             {
-                Debug.LogError("Key not found in nodes dictionary: " + current);
-                break;
-            }
+                float distanceToNeighbor = Vector3.Distance(current, neighbor);
+                float tentativeDistance = distances[current] + distanceToNeighbor;
 
-            foreach (Node neighbor in nodes[current].adjacentNodes)
-            {
-                float alternateDistance = distance[current] + Mathf.Abs(current.x - neighbor.position.x) + Mathf.Abs(current.y - neighbor.position.y);
-
-                if (alternateDistance < distance[neighbor.position])
+                if (tentativeDistance < distances[neighbor])
                 {
-                    distance[neighbor.position] = alternateDistance;
-                    previous[neighbor.position] = current;
-
-                    Debug.Log("Adding to previous dictionary: " + neighbor.position + " -> " + current);
+                    distances[neighbor] = tentativeDistance;
+                    cameFrom[neighbor] = current;
                 }
             }
         }
 
-        List<Vector3> path = new List<Vector3>();
-        Vector3 currentPos = end;
+        return null;
+    }
 
-        while (currentPos != start)
+    private Vector3 GetNextVertex()
+    {
+        Vector3 nextVertex = Vector3.zero;
+        float shortestDistance = Mathf.Infinity;
+
+        foreach (Vector3 tilePos in walkableTilePositions)
         {
-            path.Add(currentPos);
+            if (!visited.Contains(tilePos) && distances[tilePos] < shortestDistance)
+            {
+                nextVertex = tilePos;
+                shortestDistance = distances[tilePos];
+            }
+        }
 
-            if (!previous.ContainsKey(currentPos))
+        return nextVertex;
+    }
+
+    private List<Vector3> GetNeighbors(Vector3 current)
+    {
+        List<Vector3> neighbors = new List<Vector3>();
+
+        foreach (Vector3 tilePos in walkableTilePositions)
+        {
+            if (Vector3.Distance(current, tilePos) <= 1.1f) // check if tile is within range
             {
-                Debug.LogError("Key not found in previous dictionary: " + currentPos);
-                break;
+                neighbors.Add(tilePos);
             }
-            else
-            {
-                currentPos = previous[currentPos];
-            }
+        }
+
+        return neighbors;
+    }
+
+    private List<Vector3> GeneratePath(Vector3 start, Vector3 end)
+    {
+        Vector3 current = end;
+
+        while (current != start)
+        {
+            path.Add(current);
+            current = cameFrom[current];
         }
 
         path.Add(start);
         path.Reverse();
 
-        Debug.Log("Shortest path found: " + string.Join(", ", path));
-
         return path;
     }
-
-    private IEnumerator WaitForSpawns()
-    {
-        yield return new WaitForSeconds(5f);
-
-        walkableTilePositions = WalkableTiles.instance.GetWalkableTilePositions();
-
-        foreach (Vector3 position in walkableTilePositions)
-        {
-            Node node = new Node { position = position };
-            nodes[position] = node;
-            Debug.Log("Added node: " + node.position);
-        }
-
-        // Check for adjacent nodes for each node
-        foreach (Node node in nodes.Values)
-        {
-            Vector3[] directions = new Vector3[] { Vector3.forward, Vector3.back, Vector3.left, Vector3.right };
-
-            foreach (Vector3 direction in directions)
-            {
-                Vector3 adjacentPosition = node.position + direction;
-
-                if (nodes.ContainsKey(adjacentPosition))
-                {
-                    node.adjacentNodes.Add(nodes[adjacentPosition]);
-                }
-            }
-        }
-
-        Vector3 playerPosition = PlayerSpawner.instance.spawnPosition;
-        playerPosition.y -= gameObject.transform.localScale.y / 2;
-        Vector3 exitPosition = ExitSpawner.instance.exitPosition;
-        exitPosition.y -= gameObject.transform.localScale.y / 2;
-
-        // Check if player and exit positions are within bounds
-        if (!walkableTilePositions.Contains(playerPosition))
-        {
-            Debug.LogError("Player position not within bounds of walkable tiles: " + playerPosition);
-            yield break;
-        }
-
-        if (!walkableTilePositions.Contains(exitPosition))
-        {
-            Debug.LogError("Exit position not within bounds of walkable tiles: " + exitPosition);
-            yield break;
-        }
-
-        // Add adjacent nodes to player and exit positions
-        Node playerNode = nodes[playerPosition];
-        Node exitNode = nodes[exitPosition];
-
-        foreach (Node node in nodes.Values)
-        {
-            if (node.position == playerPosition || node.position == exitPosition)
-            {
-                continue;
-            }
-
-            if (Mathf.Abs(node.position.x - playerPosition.x) + Mathf.Abs(node.position.y - playerPosition.y) <= 1)
-            {
-                playerNode.adjacentNodes.Add(node);
-            }
-
-            if (Mathf.Abs(node.position.x - exitPosition.x) + Mathf.Abs(node.position.y - exitPosition.y) <= 1)
-            {
-                exitNode.adjacentNodes.Add(node);
-            }
-        }
-
-        List<Vector3> path = FindShortestPath(playerPosition, exitPosition);
-
-        Debug.Log("Shortest path found: " + string.Join(", ", path));
-
-        for (int i = 0; i < path.Count; i++)
-        {
-            Debug.Log("Path node: " + path[i]);
-        }
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-}
-
-public class Node
-{
-    public Vector3 position;
-    public List<Node> adjacentNodes = new List<Node>();
 }

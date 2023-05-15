@@ -91,8 +91,6 @@ public class MapGenerator : MonoBehaviour
         else if(drawMode == DrawMode.Mesh)
         {
             display.DrawMesh(MeshGenerator.GenerateTerrainMesh(noiseMap, meshHeightMultiplier, meshHeightCurve, levelOfDetail), TextureGenerator.TextureFromColorMap(colorMap, mapChunkSize, mapChunkSize));         
-
-            MeshCollider meshCollider = mesh.AddComponent<MeshCollider>();
         }
     }
 
